@@ -9,7 +9,16 @@ const createUser = async (req, res) => {
       });
     }
 
-    const user = await User.create(req.body);
+    const { name, email, password: p, username, bio, avatar } = req.body;
+    const user = await User.create({
+      name,
+      email,
+      password: p,
+      username,
+      bio,
+      avatar,
+    });
+
     const { password, ...safeUser } = user.toObject();
     res
       .status(201)
@@ -23,12 +32,10 @@ const createUser = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const results = await User.find();
+    const users = await User.find();
     res.status(200).json({
       message: 'Fetched all users successfully',
-      status: 200,
-      error: false,
-      posts: results,
+      users,
     });
   } catch (error) {
     console.log('Error', error);
@@ -39,11 +46,11 @@ const getAllUsers = async (req, res) => {
 
 const getAUser = async (req, res) => {
   try {
-    const results = await User.findById(req.params.id);
-    if (!results) {
+    const user = await User.findById(req.params.id);
+    if (!user) {
       return res.status(404).json({ message: 'Not found' });
     }
-    res.status(200).json(results);
+    res.status(200).json(user);
   } catch (error) {
     console.log('Error', error);
     const { statusCode, message } = ApiError(error);
@@ -59,7 +66,10 @@ const updateUser = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+    const { name, email, username, bio, avatar } = req.body;
+    const updatedUser = { name, email, username, bio, avatar };
+
+    const user = await User.findByIdAndUpdate(req.params.id, updatedUser, {
       new: true,
       runValidators: true,
     });

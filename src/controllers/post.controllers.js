@@ -1,5 +1,5 @@
 import { Post } from '../models/post.model.js';
-import { ApiError } from '../utils/helpers.js';
+import { ApiError, authorData } from '../utils/helpers.js';
 
 const createPost = async (req, res) => {
   try {
@@ -8,8 +8,8 @@ const createPost = async (req, res) => {
         message: 'All field are required',
       });
     }
-
-    const post = await Post.create(req.body);
+    const { author, ...safePost } = req.body;
+    const post = await Post.create(safePost);
 
     res.status(201).json({
       message: 'Post created successfully',
@@ -24,10 +24,9 @@ const createPost = async (req, res) => {
 
 const getAllPosts = async (req, res) => {
   try {
-    const results = await Post.find();
+    const results = await Post.find().populate('author', authorData);
     res.status(200).json({
       message: 'Fetched all post successfully',
-      status: 200,
       posts: results,
     });
   } catch (error) {
@@ -39,10 +38,28 @@ const getAllPosts = async (req, res) => {
 
 const getAPost = async (req, res) => {
   try {
-    const results = await Post.findById(req.params.id);
+    const results = await Post.findById(req.params.id).populate(
+      'author',
+      authorData,
+    );
     if (!results) {
       return res.status(404).json({ message: 'Not found' });
     }
+    res.status(200).json(results);
+  } catch (error) {
+    console.log('Error', error);
+    const { statusCode, message } = ApiError(error);
+    res.status(statusCode).json({ error: true, message });
+  }
+};
+
+const getPostByUser = async (req, res) => {
+  try {
+    const results = await Post.find({ author: req.params.id }).populate(
+      'author',
+      authorData,
+    );
+
     res.status(200).json(results);
   } catch (error) {
     console.log('Error', error);
@@ -59,7 +76,10 @@ const updatePost = async (req, res) => {
       });
     }
 
-    const post = await Post.findByIdAndUpdate(req.params.id, req.body, {
+    const { title, subtitle, coverImage, body, slug, tag, status } = req.body;
+
+    const safePost = { title, subtitle, coverImage, body, slug, tag, status };
+    const post = await Post.findByIdAndUpdate(req.params.id, safePost, {
       new: true,
       runValidators: true,
     });
@@ -94,4 +114,11 @@ const deletePost = async (req, res) => {
   }
 };
 
-export { createPost, getAllPosts, getAPost, updatePost, deletePost };
+export {
+  createPost,
+  getAllPosts,
+  getAPost,
+  updatePost,
+  deletePost,
+  getPostByUser,
+};

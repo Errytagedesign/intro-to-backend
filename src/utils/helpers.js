@@ -30,9 +30,11 @@ export const ApiError = (error) => {
     };
   }
 
-  return { error: true, statusCode: 500, message: 'Internal server error' };
+  return { statusCode: 500, message: 'Internal server error' };
 };
 
 export const ApiResponse = ({ message, data }) => {
   return { error: false, message, data };
 };
+
+export const authorData = 'name username avatar';
