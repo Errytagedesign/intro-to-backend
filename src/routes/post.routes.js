@@ -1,15 +1,20 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   createPost,
   deletePost,
   getAllPosts,
   getAPost,
   updatePost,
-} from '../controllers/post.controllers.js';
+} from "../controllers/post.controllers.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route('/').post(createPost).get(getAllPosts); // this result into: POST = /api/posts while GET = /api/posts
-router.route('/:id').get(getAPost).patch(updatePost).delete(deletePost); // this result into: GET = /api/post/id, PATCH= /api/post/id, DELETE = /api/post/id
+router.route("/").post(authenticate, createPost).get(getAllPosts);
+router
+  .route("/:id")
+  .get(getAPost)
+  .patch(authenticate, updatePost)
+  .delete(authenticate, deletePost);
 
 export default router;
