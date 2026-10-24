@@ -6,7 +6,6 @@ import jwt from "jsonwebtoken";
  */
 
 const authenticate = (req, res, next) => {
-  console.log({ req: req.headers.authorization });
   // Get token from Authorization header
   const authHeader = req.headers.authorization;
 
@@ -45,12 +44,12 @@ const authenticate = (req, res, next) => {
   }
 };
 
-const authorize = (resource) => {
+const authorize = (model) => {
   return async (req, res, next) => {
     try {
       // Get the resource (post, comment, etc.) from database
       // This is just an example - you'd implement this per resource type
-      const resourceDoc = await resource.findById(req.params.id);
+      const resourceDoc = await model.findById(req.params.id);
 
       if (!resourceDoc) {
         return res.status(404).json({ message: "Resource not found" });

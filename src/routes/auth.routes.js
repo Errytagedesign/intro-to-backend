@@ -7,7 +7,6 @@ const router = Router();
 
 // 📝 Register a new user
 router.post("/register", async (req, res) => {
-  console.log("response>>>", res.ValidationError);
   try {
     const { email, password, name } = req.body;
 
@@ -46,8 +45,8 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Find user by email and include password for verification
+    const user = await User.findOne({ email }).select("+password");
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }

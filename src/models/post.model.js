@@ -1,5 +1,5 @@
-import mongoose, { Schema } from 'mongoose';
-import { slugify } from '../utils/helpers.js';
+import mongoose, { Schema } from "mongoose";
+import { slugify } from "../utils/helpers.js";
 
 const postSchema = new Schema(
   {
@@ -23,20 +23,20 @@ const postSchema = new Schema(
       unique: true,
       lowercase: true,
     },
-    coverImage: { type: String },
+    coverImage: { type: String, default: "" },
     tags: [{ type: String, lowercase: true, trim: true }],
-    status: { type: String, enum: ['draft', 'published'], default: 'draft' },
-    author: { type: Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ["draft", "published"], default: "draft" },
+    author: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {
     timestamps: true,
   },
 );
 
-postSchema.pre('validate', function () {
-  if (this.isModified('title')) {
+postSchema.pre("validate", function () {
+  if (this.isModified("title")) {
     this.slug = slugify(this.title);
   }
 });
 
-export const Post = mongoose.model('Post', postSchema);
+export const Post = mongoose.model("Post", postSchema);

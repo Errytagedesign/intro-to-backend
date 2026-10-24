@@ -31,7 +31,7 @@ const userSchema = new Schema(
       enum: ["user", "admin"],
       default: "user",
     },
-    avatar: { type: String },
+    avatar: { type: String, default: "" },
     username: {
       type: String,
       required: true,

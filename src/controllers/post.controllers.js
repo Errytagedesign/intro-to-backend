@@ -2,7 +2,6 @@ import { Post } from "../models/post.model.js";
 import { ApiError, authorData } from "../utils/helpers.js";
 
 const createPost = async (req, res) => {
-  console.log("create-req>>>", req);
   try {
     if (Object.values(req.body).some((v) => v === "")) {
       return res.status(400).json({
@@ -11,6 +10,8 @@ const createPost = async (req, res) => {
     }
     const { author, ...safePost } = req.body;
     const post = await Post.create({ ...safePost, author: req.user.userId });
+
+    await post.populate("author", authorData);
 
     res.status(201).json({
       message: "Post created successfully",
@@ -81,9 +82,11 @@ const updatePost = async (req, res) => {
 
     const safePost = { title, subtitle, coverImage, body, slug, tag, status };
     const post = await Post.findByIdAndUpdate(req.params.id, safePost, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     });
+
+    await post.populate("author", authorData);
     if (!post) {
       return res.status(404).json({ message: "Post Not found" });
     }
