@@ -62,7 +62,10 @@ const getPostByUser = async (req, res) => {
       authorData,
     );
 
-    res.status(200).json(results);
+    res.status(200).json({
+      message: "Fetched all post successfully",
+      posts: results,
+    });
   } catch (error) {
     console.log("Error", error);
     const { statusCode, message } = ApiError(error);

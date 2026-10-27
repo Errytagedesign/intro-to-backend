@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { decode } from "jsonwebtoken";
 
 /**
  * Authentication Middleware
@@ -29,6 +29,7 @@ const authenticate = (req, res, next) => {
       token,
       process.env.JWT_SECRET || "your-secret-key",
     );
+
     req.user = decoded;
     next();
   } catch (error) {
@@ -74,4 +75,94 @@ const authorize = (model) => {
   };
 };
 
-export { authenticate, authorize };
+const authenticateAdmin = (req, res, next) => {
+  // Get token from Authorization header
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      message: "Authentication required. Please provide a valid token.",
+    });
+  }
+
+  // Extract token (remove "Bearer " prefix)
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ message: "Authentication required. No token provided." });
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "your-secret-key",
+    );
+
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden. Admins only." });
+    }
+
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token has expired" });
+    }
+
+    console.error(error);
+    res.status(500).json({ message: "Authentication error" });
+  }
+};
+
+// allow access if the authenticated user owns :id, or is an admin
+const isSelfOrAdmin = (req, res, next) => {
+  if (req.user.userId === req.params.id || req.user.role === "admin") {
+    return next();
+  }
+  return res.status(403).json({
+    message: "Forbidden. You do not have permission to access this resource.",
+  });
+};
+
+const authorizeAdmin = (model) => {
+  return async (req, res, next) => {
+    try {
+      // Get the resource (post, comment, etc.) from database
+      // This is just an example - you'd implement this per resource type
+      const adminDoc = await model.findById(req.params.userId);
+
+      if (!adminDoc) {
+        return res.status(404).json({ message: "Admin not found" });
+      }
+
+      // Check if the current user is the author
+      // This assumes the resource has an 'author' field with user ID
+      if (adminDoc.role.toString() !== "admin") {
+        return res.status(403).json({
+          message:
+            "Forbidden. You do not have permission to modify this resource.",
+        });
+      }
+
+      // Attach resource to request for next middleware
+      req.resource = adminDoc;
+      next();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Authorization error" });
+    }
+  };
+};
+
+export {
+  authenticate,
+  authorize,
+  authorizeAdmin,
+  authenticateAdmin,
+  isSelfOrAdmin,
+};
