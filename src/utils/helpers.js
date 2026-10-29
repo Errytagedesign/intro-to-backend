@@ -38,3 +38,7 @@ export const ApiResponse = ({ message, data }) => {
 };
 
 export const authorData = "name email username avatar";
+
+export const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};

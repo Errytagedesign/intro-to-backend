@@ -1,4 +1,5 @@
 import jwt, { decode } from "jsonwebtoken";
+import ApiError from "../utils/ApiErrors.js";
 
 /**
  * Authentication Middleware
@@ -10,18 +11,20 @@ const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      message: "Authentication required. Please provide a valid token.",
-    });
+    return next(
+      ApiError.unauthorized(
+        "Authentication required. Please provide a valid token.",
+      ),
+    );
   }
 
   // Extract token (remove "Bearer " prefix)
   const token = authHeader.split(" ")[1];
 
   if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Authentication required. No token provided." });
+    return next(
+      ApiError.unauthorized("Authentication required. No token provided."),
+    );
   }
 
   try {
@@ -34,14 +37,13 @@ const authenticate = (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token" });
+      return next(ApiError.unauthorized("Invalid token"));
     }
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token has expired" });
+      return next(ApiError.unauthorized("Token has expired"));
     }
 
-    console.error(error);
-    res.status(500).json({ message: "Authentication error" });
+    return next(ApiError.unauthorized("Authentication error"));
   }
 };
 
@@ -53,16 +55,17 @@ const authorize = (model) => {
       const resourceDoc = await model.findById(req.params.id);
 
       if (!resourceDoc) {
-        return res.status(404).json({ message: "Resource not found" });
+        return next(ApiError.notFound("Resource not found"));
       }
 
       // Check if the current user is the author
       // This assumes the resource has an 'author' field with user ID
       if (resourceDoc.author.toString() !== req.user.userId) {
-        return res.status(403).json({
-          message:
+        return next(
+          ApiError.forbidden(
             "Forbidden. You do not have permission to modify this resource.",
-        });
+          ),
+        );
       }
 
       // Attach resource to request for next middleware
@@ -70,7 +73,7 @@ const authorize = (model) => {
       next();
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Authorization error" });
+      next(ApiError.internal("Authorization error"));
     }
   };
 };
@@ -80,18 +83,20 @@ const authenticateAdmin = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      message: "Authentication required. Please provide a valid token.",
-    });
+    return next(
+      ApiError.unauthorized(
+        "Authentication required. Please provide a valid token.",
+      ),
+    );
   }
 
   // Extract token (remove "Bearer " prefix)
   const token = authHeader.split(" ")[1];
 
   if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Authentication required. No token provided." });
+    return next(
+      ApiError.unauthorized("Authentication required. No token provided."),
+    );
   }
 
   try {
@@ -101,21 +106,21 @@ const authenticateAdmin = (req, res, next) => {
     );
 
     if (decoded.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden. Admins only." });
+      return next(ApiError.forbidden("Forbidden. Admins only."));
     }
 
     req.user = decoded;
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token" });
+      return next(ApiError.unauthorized("Invalid token"));
     }
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token has expired" });
+      return next(ApiError.unauthorized("Token has expired"));
     }
 
     console.error(error);
-    res.status(500).json({ message: "Authentication error" });
+    next(ApiError.internal("Authentication error"));
   }
 };
 
@@ -124,9 +129,11 @@ const isSelfOrAdmin = (req, res, next) => {
   if (req.user.userId === req.params.id || req.user.role === "admin") {
     return next();
   }
-  return res.status(403).json({
-    message: "Forbidden. You do not have permission to access this resource.",
-  });
+  return next(
+    ApiError.forbidden(
+      "Forbidden. You do not have permission to access this resource.",
+    ),
+  );
 };
 
 const authorizeAdmin = (model) => {
@@ -137,16 +144,17 @@ const authorizeAdmin = (model) => {
       const adminDoc = await model.findById(req.params.userId);
 
       if (!adminDoc) {
-        return res.status(404).json({ message: "Admin not found" });
+        return next(ApiError.notFound("Admin not found"));
       }
 
       // Check if the current user is the author
       // This assumes the resource has an 'author' field with user ID
       if (adminDoc.role.toString() !== "admin") {
-        return res.status(403).json({
-          message:
+        return next(
+          ApiError.forbidden(
             "Forbidden. You do not have permission to modify this resource.",
-        });
+          ),
+        );
       }
 
       // Attach resource to request for next middleware
@@ -154,7 +162,7 @@ const authorizeAdmin = (model) => {
       next();
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Authorization error" });
+      next(ApiError.internal("Authorization error"));
     }
   };
 };
