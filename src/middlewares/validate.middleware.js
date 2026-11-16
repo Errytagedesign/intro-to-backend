@@ -13,19 +13,21 @@ import ApiError from "../utils/ApiErrors.js";
  */
 const validate = (schemas) => (req, res, next) => {
   try {
+    req.validated = req.validated || {};
+
     for (const key of ["body", "query", "params"]) {
-      if (schemas[key]) {
-        const result = schemas[key].safeParse(req[key]);
-        if (!result.success) {
-          const details = result.error.issues.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          }));
-          return next(ApiError.badRequest("Validation failed", details));
-        }
-        // Overwrite with parsed values (defaults/coercions applied)
-        req[key] = result.data;
+      if (!schemas[key]) continue;
+
+      const result = schemas[key].safeParse(req[key]);
+      if (!result.success) {
+        const details = result.error.errors.map((e) => ({
+          field: e.path.join("."),
+          message: e.message,
+        }));
+        return next(ApiError.badRequest("Validation failed", details));
       }
+
+      req.validated[key] = result.data; // ✅ not overwriting req[key]
     }
     next();
   } catch (err) {

@@ -27,9 +27,20 @@ const idParamSchema = z.object({
   id: z.string().regex(objectIdRegex, "Invalid ID format"),
 });
 
+const commentSchema = z.object({
+  content: z.string().min(1, "Content is required"),
+});
+
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  search: z.string().optional(),
+});
+
 export {
+  commentSchema,
   createPostSchema,
-  updatePostSchema,
-  listPostsQuerySchema,
   idParamSchema,
+  listPostsQuerySchema,
+  updatePostSchema,
 };

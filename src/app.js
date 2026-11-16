@@ -1,12 +1,13 @@
-import express from "express";
 import cors from "cors";
+import express from "express";
+import {
+  errorHandler,
+  notFoundHandler,
+} from "./middlewares/error.middleware.js";
+import authRoutes from "./routes/auth.routes.js";
+import commentRouter from "./routes/comment.routes.js";
 import postRouter from "./routes/post.routes.js";
 import userRouter from "./routes/user.routes.js";
-import authRoutes from "./routes/auth.routes.js";
-import {
-  notFoundHandler,
-  errorHandler,
-} from "./middlewares/error.middleware.js";
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.use("/api/v1", commentRouter);
 app.use("/api/v1/posts", postRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/auth", authRoutes);

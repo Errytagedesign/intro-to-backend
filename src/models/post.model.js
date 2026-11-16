@@ -24,6 +24,7 @@ const postSchema = new Schema(
       lowercase: true,
     },
     coverImage: { type: String, default: "" },
+    commentsCount: { type: Number, default: 0 },
     tags: [{ type: String, lowercase: true, trim: true }],
     status: { type: String, enum: ["draft", "published"], default: "draft" },
     author: { type: Schema.Types.ObjectId, ref: "User" },

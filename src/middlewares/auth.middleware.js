@@ -1,4 +1,4 @@
-import jwt, { decode } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import ApiError from "../utils/ApiErrors.js";
 
 /**
@@ -6,7 +6,24 @@ import ApiError from "../utils/ApiErrors.js";
  * Verifies JWT token and attaches user info to req.user
  */
 
-const authenticate = (req, res, next) => {
+const verifyToken = (authHeader) => {
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw ApiError.unauthorized(
+      "Authentication required. Provide a Bearer token.",
+    );
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) throw ApiError.unauthorized("No token provided");
+  return jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+};
+
+const loadUser = async (decoded) => {
+  const user = await User.findById(decoded.userId).select("-password");
+  if (!user) throw ApiError.unauthorized("User no longer exists");
+  return user;
+};
+
+const authenticate = async (req, res, next) => {
   // Get token from Authorization header
   const authHeader = req.headers.authorization;
 
@@ -28,12 +45,9 @@ const authenticate = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "your-secret-key",
-    );
+    const decoded = verifyToken(authHeader);
 
-    req.user = decoded;
+    req.user = await loadUser(decoded);
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
@@ -44,6 +58,31 @@ const authenticate = (req, res, next) => {
     }
 
     return next(ApiError.unauthorized("Authentication error"));
+  }
+};
+
+const optionalAuthenticate = async (req, res, next) => {
+  // Get token from Authorization header
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  // Extract token (remove "Bearer " prefix)
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = verifyToken(authHeader);
+
+    req.user = await loadUser(decoded);
+    next();
+  } catch (error) {
+    return next();
   }
 };
 
@@ -78,7 +117,7 @@ const authorize = (model) => {
   };
 };
 
-const authenticateAdmin = (req, res, next) => {
+const authenticateAdmin = async (req, res, next) => {
   // Get token from Authorization header
   const authHeader = req.headers.authorization;
 
@@ -100,16 +139,14 @@ const authenticateAdmin = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "your-secret-key",
-    );
+    const decoded = verifyToken(authHeader);
+    req.user = await loadUser(decoded);
 
     if (decoded.role !== "admin") {
       return next(ApiError.forbidden("Forbidden. Admins only."));
     }
 
-    req.user = decoded;
+    // req.user = decoded; // Already set above with loadUser
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
@@ -169,8 +206,9 @@ const authorizeAdmin = (model) => {
 
 export {
   authenticate,
+  authenticateAdmin,
   authorize,
   authorizeAdmin,
-  authenticateAdmin,
   isSelfOrAdmin,
+  optionalAuthenticate,
 };

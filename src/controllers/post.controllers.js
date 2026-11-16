@@ -1,41 +1,32 @@
 import { Post } from "../models/post.model.js";
-import { ApiError, authorData } from "../utils/helpers.js";
+import { authorData } from "../utils/helpers.js";
 import { sendSuccess } from "../utils/response.js";
 
 const createPost = async (req, res) => {
-  try {
-    if (Object.values(req.body).some((v) => v === "")) {
-      return res.status(400).json({
-        message: "All field are required",
-      });
-    }
-
-    const { author, ...safePost } = req.body;
-    const post = await Post.create({ ...safePost, author: req.user.userId });
-
-    await post.populate("author", authorData);
-
-    res.status(201).json({
-      message: "Post created successfully",
-      post,
+  if (Object.values(req.body).some((v) => v === "")) {
+    return res.status(400).json({
+      message: "All field are required",
     });
-  } catch (error) {
-    console.log("Error", error);
-    const { statusCode, message } = ApiError(error);
-    res.status(statusCode).json({ error: true, message });
   }
+
+  const { author, ...safePost } = req.validated.body;
+  const post = await Post.create({ ...safePost, author: req.user.userId });
+
+  await post.populate("author", authorData);
+
+  return sendSuccess(res, { post }, "Post created successfully", {
+    statusCode: 201,
+  });
 };
 
 const getAllPosts = async (req, res) => {
-  const { page = 1, limit = 10, searchTerm = "" } = req.query;
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const { page = 1, limit = 10, search = "" } = req.validated.query;
+  const skip = (page - 1) * limit;
 
   const filter = {};
 
-  if (searchTerm) {
-    const escapedTerm = searchTerm
-      .trim()
-      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (search) {
+    const escapedTerm = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const regex = { $regex: escapedTerm, $options: "i" };
 
     filter.$or = [{ title: regex }, { subtitle: regex }, { body: regex }];
@@ -47,24 +38,24 @@ const getAllPosts = async (req, res) => {
       .populate("author", authorData)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit)),
+      .limit(limit),
   ]);
 
-  const totalPages = Math.ceil(total / parseInt(limit));
+  const totalPages = Math.ceil(total / limit);
 
   return sendSuccess(res, { posts }, "Fetched all post successfully", {
     statusCode: 200,
     meta: {
       total,
       totalPages,
-      currentPage: parseInt(page),
-      limit: parseInt(limit),
+      currentPage: page,
+      limit: limit,
     },
   });
 };
 
 const getAPost = async (req, res) => {
-  const results = await Post.findById(req.params.id).populate(
+  const results = await Post.findById(req.validated.params.id).populate(
     "author",
     authorData,
   );
@@ -78,7 +69,7 @@ const getAPost = async (req, res) => {
 };
 
 const getPostByUser = async (req, res) => {
-  const results = await Post.find({ author: req.params.id }).populate(
+  const results = await Post.find({ author: req.validated.params.id }).populate(
     "author",
     authorData,
   );
@@ -89,16 +80,17 @@ const getPostByUser = async (req, res) => {
 };
 
 const updatePost = async (req, res) => {
-  if (Object.keys(req.body).length === 0) {
+  if (Object.keys(req.validated.body).length === 0) {
     return res.status(400).json({
       message: "No data provided for update",
     });
   }
 
-  const { title, subtitle, coverImage, body, slug, tag, status } = req.body;
+  const { title, subtitle, coverImage, body, slug, tag, status } =
+    req.validated.body;
 
   const safePost = { title, subtitle, coverImage, body, slug, tag, status };
-  const post = await Post.findByIdAndUpdate(req.params.id, safePost, {
+  const post = await Post.findByIdAndUpdate(req.validated.params.id, safePost, {
     returnDocument: "after",
     runValidators: true,
   });
@@ -114,7 +106,7 @@ const updatePost = async (req, res) => {
 };
 
 const deletePost = async (req, res) => {
-  const results = await Post.findByIdAndDelete(req.params.id);
+  const results = await Post.findByIdAndDelete(req.validated.params.id);
   if (!results) {
     return res.status(404).json({ message: "Not found" });
   }
