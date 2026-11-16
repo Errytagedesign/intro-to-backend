@@ -8,14 +8,15 @@ import {
 } from "../controllers/post.controllers.js";
 import { authenticate, authorize } from "../middlewares/auth.middleware.js";
 import { Post } from "../models/post.model.js";
+import { asyncHandler } from "../utils/helpers.js";
 
 const router = Router();
 
-router.route("/").post(authenticate, createPost).get(getAllPosts);
+router.route("/").post(authenticate, createPost).get(asyncHandler(getAllPosts));
 router
   .route("/:id")
-  .get(getAPost)
-  .patch(authenticate, authorize(Post), updatePost)
-  .delete(authenticate, authorize(Post), deletePost);
+  .get(asyncHandler(getAPost))
+  .patch(authenticate, authorize(Post), asyncHandler(updatePost))
+  .delete(authenticate, authorize(Post), asyncHandler(deletePost));
 
 export default router;

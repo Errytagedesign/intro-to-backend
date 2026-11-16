@@ -14,6 +14,6 @@ export const sendSuccess = (
   { statusCode = 200, meta = null } = {},
 ) => {
   const body = { success: true, message, data };
-  if (meta) body.data.meta = meta;
+  if (meta) body.data.pagination = meta;
   return res.status(statusCode).json(body);
 };
