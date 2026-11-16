@@ -27,12 +27,23 @@ const createPost = async (req, res) => {
 };
 
 const getAllPosts = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10, searchTerm = "" } = req.query;
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
+  const filter = {};
+
+  if (searchTerm) {
+    const escapedTerm = searchTerm
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = { $regex: escapedTerm, $options: "i" };
+
+    filter.$or = [{ title: regex }, { subtitle: regex }, { body: regex }];
+  }
+
   const [total, posts] = await Promise.all([
-    Post.countDocuments(),
-    Post.find()
+    Post.countDocuments(filter),
+    Post.find(filter)
       .populate("author", authorData)
       .sort({ createdAt: -1 })
       .skip(skip)

@@ -4,6 +4,7 @@ import {
   deletePost,
   getAllPosts,
   getAPost,
+  getPostByUser,
   updatePost,
 } from "../controllers/post.controllers.js";
 import { authenticate, authorize } from "../middlewares/auth.middleware.js";
@@ -12,7 +13,11 @@ import { asyncHandler } from "../utils/helpers.js";
 
 const router = Router();
 
-router.route("/").post(authenticate, createPost).get(asyncHandler(getAllPosts));
+router
+  .route("/")
+  .post(authenticate, createPost)
+  .get(asyncHandler(getAllPosts))
+  .get(authenticate, asyncHandler(getPostByUser));
 router
   .route("/:id")
   .get(asyncHandler(getAPost))
